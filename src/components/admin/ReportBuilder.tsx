@@ -1,11 +1,11 @@
-
 import { useState } from 'react';
-import { Database, Link, Filter, BarChart3, Save, Eye, Plus, X, Code, ChevronDown } from 'lucide-react';
+import { Database, Link, Filter, BarChart3, Save, Eye, Plus, X, Code, ChevronDown, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { PromptReportBuilder } from './PromptReportBuilder';
 
 interface ReportBuilderProps {
   onSave: () => void;
@@ -44,6 +44,7 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
   const [reportName, setReportName] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [sqlQuery, setSqlQuery] = useState('');
+  const [mode, setMode] = useState<'visual' | 'sql' | 'prompt'>('visual');
 
   const availableTables = [
     { 
@@ -174,6 +175,50 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
     return table ? table.columns : [];
   };
 
+  // Add mode selection at the top
+  const renderModeSelector = () => (
+    <div className="flex gap-1 mb-6 p-1 bg-gray-100 rounded-lg w-fit">
+      <button
+        onClick={() => setMode('visual')}
+        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+          mode === 'visual'
+            ? 'bg-white text-gray-900 shadow-sm'
+            : 'text-gray-600 hover:text-gray-900'
+        }`}
+      >
+        <Database className="w-4 h-4 mr-2 inline" />
+        Visual Builder
+      </button>
+      <button
+        onClick={() => setMode('prompt')}
+        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+          mode === 'prompt'
+            ? 'bg-white text-gray-900 shadow-sm'
+            : 'text-gray-600 hover:text-gray-900'
+        }`}
+      >
+        <MessageSquare className="w-4 h-4 mr-2 inline" />
+        AI Prompt
+      </button>
+      <button
+        onClick={() => setMode('sql')}
+        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+          mode === 'sql'
+            ? 'bg-white text-gray-900 shadow-sm'
+            : 'text-gray-600 hover:text-gray-900'
+        }`}
+      >
+        <Code className="w-4 h-4 mr-2 inline" />
+        Advanced SQL
+      </button>
+    </div>
+  );
+
+  // Return early if prompt mode is selected
+  if (mode === 'prompt') {
+    return <PromptReportBuilder onSave={onSave} onPreview={onPreview} />;
+  }
+
   return (
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
@@ -202,7 +247,10 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
         </div>
       </div>
 
-      {showAdvanced ? (
+      {/* Mode Selector */}
+      {renderModeSelector()}
+
+      {mode === 'sql' ? (
         /* Advanced SQL Mode */
         <Card className="p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Advanced SQL Query</h2>
