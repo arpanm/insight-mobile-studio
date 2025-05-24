@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import { Database, JoinIcon, Filter, BarChart3, Save, Eye } from 'lucide-react';
+import { Database, Link, Filter, BarChart3, Save, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
