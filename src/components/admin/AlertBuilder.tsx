@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Bell, AlertTriangle, TrendingUp, TrendingDown, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -100,14 +101,17 @@ export const AlertBuilder = ({ onSave }: AlertBuilderProps) => {
                     <SelectValue placeholder="Select condition" />
                   </SelectTrigger>
                   <SelectContent>
-                    {conditions.map((cond) => (
-                      <SelectItem key={cond.value} value={cond.value}>
-                        <div className="flex items-center">
-                          <cond.icon className="w-4 h-4 mr-2" />
-                          {cond.label}
-                        </div>
-                      </SelectItem>
-                    ))}
+                    {conditions.map((cond) => {
+                      const IconComponent = cond.icon;
+                      return (
+                        <SelectItem key={cond.value} value={cond.value}>
+                          <div className="flex items-center">
+                            <IconComponent className="w-4 h-4 mr-2" />
+                            {cond.label}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -207,7 +211,7 @@ export const AlertBuilder = ({ onSave }: AlertBuilderProps) => {
                   <div className="flex justify-between items-start">
                     <div>
                       <h4 className="font-medium text-green-800 text-sm">Revenue Target Met</h4>
-                      <p className="text-green-700 text-xs">Revenue > $50,000</p>
+                      <p className="text-green-700 text-xs">Revenue {'>'} $50,000</p>
                     </div>
                     <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">Active</span>
                   </div>
@@ -217,7 +221,7 @@ export const AlertBuilder = ({ onSave }: AlertBuilderProps) => {
                   <div className="flex justify-between items-start">
                     <div>
                       <h4 className="font-medium text-red-800 text-sm">Low Conversion Rate</h4>
-                      <p className="text-red-700 text-xs">Conversion Rate < 2%</p>
+                      <p className="text-red-700 text-xs">Conversion Rate {'<'} 2%</p>
                     </div>
                     <span className="text-xs text-red-600 bg-red-100 px-2 py-1 rounded">Triggered</span>
                   </div>
@@ -227,7 +231,7 @@ export const AlertBuilder = ({ onSave }: AlertBuilderProps) => {
                   <div className="flex justify-between items-start">
                     <div>
                       <h4 className="font-medium text-blue-800 text-sm">Daily Order Goal</h4>
-                      <p className="text-blue-700 text-xs">Orders > 100</p>
+                      <p className="text-blue-700 text-xs">Orders {'>'} 100</p>
                     </div>
                     <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">Active</span>
                   </div>
