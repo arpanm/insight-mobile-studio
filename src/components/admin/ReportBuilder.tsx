@@ -1,5 +1,6 @@
+
 import { useState } from 'react';
-import { Database, Link, Filter, BarChart3, Save, Eye } from 'lucide-react';
+import { Database, Link, Filter, BarChart3, Save, Eye, Plus, X, Code, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,16 +12,76 @@ interface ReportBuilderProps {
   onPreview: () => void;
 }
 
+interface SelectedTable {
+  id: string;
+  name: string;
+  alias: string;
+  selectedColumns: string[];
+}
+
+interface JoinRule {
+  id: string;
+  leftTable: string;
+  leftColumn: string;
+  rightTable: string;
+  rightColumn: string;
+  joinType: string;
+}
+
+interface FilterRule {
+  id: string;
+  table: string;
+  column: string;
+  operator: string;
+  value: string;
+}
+
 export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
-  const [selectedTable, setSelectedTable] = useState('');
+  const [selectedTables, setSelectedTables] = useState<SelectedTable[]>([]);
+  const [joinRules, setJoinRules] = useState<JoinRule[]>([]);
+  const [filterRules, setFilterRules] = useState<FilterRule[]>([]);
   const [selectedChart, setSelectedChart] = useState('');
   const [reportName, setReportName] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [sqlQuery, setSqlQuery] = useState('');
 
-  const tables = [
-    { value: 'sales', label: 'Sales Data' },
-    { value: 'customers', label: 'Customer Data' },
-    { value: 'products', label: 'Product Data' },
-    { value: 'regions', label: 'Regional Data' }
+  const availableTables = [
+    { 
+      value: 'sales', 
+      label: 'Sales Data',
+      columns: ['order_id', 'customer_id', 'product_id', 'revenue', 'quantity', 'order_date', 'region']
+    },
+    { 
+      value: 'customers', 
+      label: 'Customer Data',
+      columns: ['customer_id', 'customer_name', 'email', 'phone', 'city', 'country', 'signup_date']
+    },
+    { 
+      value: 'products', 
+      label: 'Product Data',
+      columns: ['product_id', 'product_name', 'category', 'price', 'cost', 'brand', 'launch_date']
+    },
+    { 
+      value: 'regions', 
+      label: 'Regional Data',
+      columns: ['region', 'country', 'manager', 'target', 'population']
+    }
+  ];
+
+  const joinTypes = [
+    { value: 'inner', label: 'Inner Join (Show matching records only)' },
+    { value: 'left', label: 'Left Join (Show all from left table)' },
+    { value: 'right', label: 'Right Join (Show all from right table)' },
+    { value: 'full', label: 'Full Join (Show all records)' }
+  ];
+
+  const operators = [
+    { value: 'equals', label: 'Equals' },
+    { value: 'not_equals', label: 'Not Equals' },
+    { value: 'greater', label: 'Greater Than' },
+    { value: 'less', label: 'Less Than' },
+    { value: 'contains', label: 'Contains' },
+    { value: 'starts_with', label: 'Starts With' }
   ];
 
   const chartTypes = [
@@ -32,13 +93,86 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
     { value: 'area', label: 'Area Chart', icon: '📉' }
   ];
 
-  const aggregations = [
-    { value: 'sum', label: 'Sum' },
-    { value: 'avg', label: 'Average' },
-    { value: 'count', label: 'Count' },
-    { value: 'min', label: 'Minimum' },
-    { value: 'max', label: 'Maximum' }
-  ];
+  const addTable = (tableValue: string) => {
+    const table = availableTables.find(t => t.value === tableValue);
+    if (table && !selectedTables.find(t => t.name === tableValue)) {
+      const newTable: SelectedTable = {
+        id: Date.now().toString(),
+        name: tableValue,
+        alias: table.label,
+        selectedColumns: []
+      };
+      setSelectedTables([...selectedTables, newTable]);
+    }
+  };
+
+  const removeTable = (tableId: string) => {
+    setSelectedTables(selectedTables.filter(t => t.id !== tableId));
+    setJoinRules(joinRules.filter(j => j.leftTable !== tableId && j.rightTable !== tableId));
+    setFilterRules(filterRules.filter(f => f.table !== tableId));
+  };
+
+  const toggleColumn = (tableId: string, column: string) => {
+    setSelectedTables(selectedTables.map(table => {
+      if (table.id === tableId) {
+        const columns = table.selectedColumns.includes(column)
+          ? table.selectedColumns.filter(c => c !== column)
+          : [...table.selectedColumns, column];
+        return { ...table, selectedColumns: columns };
+      }
+      return table;
+    }));
+  };
+
+  const addJoinRule = () => {
+    if (selectedTables.length >= 2) {
+      const newJoin: JoinRule = {
+        id: Date.now().toString(),
+        leftTable: '',
+        leftColumn: '',
+        rightTable: '',
+        rightColumn: '',
+        joinType: 'inner'
+      };
+      setJoinRules([...joinRules, newJoin]);
+    }
+  };
+
+  const updateJoinRule = (joinId: string, field: keyof JoinRule, value: string) => {
+    setJoinRules(joinRules.map(join => 
+      join.id === joinId ? { ...join, [field]: value } : join
+    ));
+  };
+
+  const removeJoinRule = (joinId: string) => {
+    setJoinRules(joinRules.filter(j => j.id !== joinId));
+  };
+
+  const addFilterRule = () => {
+    const newFilter: FilterRule = {
+      id: Date.now().toString(),
+      table: '',
+      column: '',
+      operator: 'equals',
+      value: ''
+    };
+    setFilterRules([...filterRules, newFilter]);
+  };
+
+  const updateFilterRule = (filterId: string, field: keyof FilterRule, value: string) => {
+    setFilterRules(filterRules.map(filter => 
+      filter.id === filterId ? { ...filter, [field]: value } : filter
+    ));
+  };
+
+  const removeFilterRule = (filterId: string) => {
+    setFilterRules(filterRules.filter(f => f.id !== filterId));
+  };
+
+  const getColumnsForTable = (tableName: string) => {
+    const table = availableTables.find(t => t.value === tableName);
+    return table ? table.columns : [];
+  };
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -49,6 +183,14 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
           <p className="text-gray-600 mt-2">Create custom reports with drag-and-drop interface</p>
         </div>
         <div className="flex gap-3">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="bg-gray-100"
+          >
+            <Code className="w-5 h-5 mr-2" />
+            {showAdvanced ? 'Simple Mode' : 'Advanced SQL'}
+          </Button>
           <Button variant="outline" onClick={onPreview}>
             <Eye className="w-5 h-5 mr-2" />
             Preview
@@ -60,56 +202,11 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Data Sources */}
+      {showAdvanced ? (
+        /* Advanced SQL Mode */
         <Card className="p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <Database className="w-5 h-5 mr-2 text-blue-600" />
-            Data Sources
-          </h2>
-          
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Advanced SQL Query</h2>
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Primary Table
-              </label>
-              <Select value={selectedTable} onValueChange={setSelectedTable}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select table" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tables.map((table) => (
-                    <SelectItem key={table.value} value={table.value}>
-                      {table.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Separator />
-
-            <div>
-              <h3 className="font-medium text-gray-800 mb-3">Available Fields</h3>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {['Revenue', 'Customer ID', 'Product Name', 'Region', 'Date', 'Quantity'].map((field) => (
-                  <div key={field} className="p-2 bg-gray-50 rounded text-sm cursor-move hover:bg-gray-100 transition-colors">
-                    {field}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Report Configuration */}
-        <Card className="p-6 lg:col-span-2">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <BarChart3 className="w-5 h-5 mr-2 text-purple-600" />
-            Report Configuration
-          </h2>
-
-          <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Report Name
@@ -120,145 +217,353 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
                 placeholder="Enter report name"
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Visualization Type
+                SQL Query
               </label>
-              <div className="grid grid-cols-2 gap-3">
-                {chartTypes.map((chart) => (
-                  <button
-                    key={chart.value}
-                    onClick={() => setSelectedChart(chart.value)}
-                    className={`p-4 border rounded-lg text-center transition-all ${
-                      selectedChart === chart.value
-                        ? 'border-purple-500 bg-purple-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="text-2xl mb-1">{chart.icon}</div>
-                    <div className="text-sm font-medium">{chart.label}</div>
-                  </button>
-                ))}
-              </div>
+              <textarea
+                value={sqlQuery}
+                onChange={(e) => setSqlQuery(e.target.value)}
+                className="w-full h-64 p-4 border border-gray-300 rounded-lg font-mono text-sm"
+                placeholder="SELECT s.revenue, c.customer_name, p.product_name 
+FROM sales s 
+LEFT JOIN customers c ON s.customer_id = c.customer_id
+LEFT JOIN products p ON s.product_id = p.product_id
+WHERE s.order_date >= '2024-01-01'"
+              />
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
+          </div>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Data Sources & Tables */}
+          <Card className="p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <Database className="w-5 h-5 mr-2 text-blue-600" />
+              Data Sources
+            </h2>
+            
+            <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  X-Axis Field
+                  Add Table
                 </label>
-                <Select>
+                <Select onValueChange={addTable}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select field" />
+                    <SelectValue placeholder="Select table to add" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="date">Date</SelectItem>
-                    <SelectItem value="region">Region</SelectItem>
-                    <SelectItem value="product">Product</SelectItem>
+                    {availableTables.map((table) => (
+                      <SelectItem key={table.value} value={table.value}>
+                        {table.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Y-Axis Field
-                </label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select field" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="revenue">Revenue</SelectItem>
-                    <SelectItem value="quantity">Quantity</SelectItem>
-                    <SelectItem value="profit">Profit</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+              <Separator />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Aggregation
-              </label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select aggregation" />
-                </SelectTrigger>
-                <SelectContent>
-                  {aggregations.map((agg) => (
-                    <SelectItem key={agg.value} value={agg.value}>
-                      {agg.label}
-                    </SelectItem>
+              <div>
+                <h3 className="font-medium text-gray-800 mb-3">Selected Tables</h3>
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {selectedTables.map((table) => (
+                    <div key={table.id} className="border border-gray-200 rounded-lg p-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-medium text-sm">{table.alias}</span>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => removeTable(table.id)}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-gray-600 mb-2">Select columns:</p>
+                        {getColumnsForTable(table.name).map((column) => (
+                          <label key={column} className="flex items-center">
+                            <input 
+                              type="checkbox"
+                              className="mr-2 text-xs"
+                              checked={table.selectedColumns.includes(column)}
+                              onChange={() => toggleColumn(table.id, column)}
+                            />
+                            <span className="text-xs">{column}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </Card>
-
-        {/* Filters & Settings */}
-        <Card className="p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <Filter className="w-5 h-5 mr-2 text-orange-600" />
-            Filters & Settings
-          </h2>
-
-          <div className="space-y-4">
-            <div>
-              <h3 className="font-medium text-gray-800 mb-3">Date Filters</h3>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select date range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="last7days">Last 7 days</SelectItem>
-                  <SelectItem value="last30days">Last 30 days</SelectItem>
-                  <SelectItem value="last3months">Last 3 months</SelectItem>
-                  <SelectItem value="lastyear">Last year</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Separator />
-
-            <div>
-              <h3 className="font-medium text-gray-800 mb-3">Export Options</h3>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input type="checkbox" className="mr-2" defaultChecked />
-                  <span className="text-sm">Allow PDF export</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" className="mr-2" defaultChecked />
-                  <span className="text-sm">Allow Excel export</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" className="mr-2" />
-                  <span className="text-sm">Allow CSV export</span>
-                </label>
+                </div>
               </div>
             </div>
+          </Card>
 
-            <Separator />
-
-            <div>
-              <h3 className="font-medium text-gray-800 mb-3">Refresh Settings</h3>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Auto-refresh" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5min">Every 5 minutes</SelectItem>
-                  <SelectItem value="15min">Every 15 minutes</SelectItem>
-                  <SelectItem value="1hour">Every hour</SelectItem>
-                  <SelectItem value="manual">Manual only</SelectItem>
-                </SelectContent>
-              </Select>
+          {/* Join Rules */}
+          <Card className="p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                <Link className="w-5 h-5 mr-2 text-green-600" />
+                Table Joins
+              </h2>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={addJoinRule}
+                disabled={selectedTables.length < 2}
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
             </div>
-          </div>
-        </Card>
-      </div>
+
+            <div className="space-y-4 max-h-64 overflow-y-auto">
+              {joinRules.map((join) => (
+                <div key={join.id} className="border border-gray-200 rounded-lg p-3">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-sm font-medium">Join Rule</span>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => removeJoinRule(join.id)}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Select value={join.joinType} onValueChange={(value) => updateJoinRule(join.id, 'joinType', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Join type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {joinTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <Select value={join.leftTable} onValueChange={(value) => updateJoinRule(join.id, 'leftTable', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Left table" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedTables.map((table) => (
+                            <SelectItem key={table.id} value={table.id}>
+                              {table.alias}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={join.rightTable} onValueChange={(value) => updateJoinRule(join.id, 'rightTable', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Right table" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedTables.map((table) => (
+                            <SelectItem key={table.id} value={table.id}>
+                              {table.alias}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <Select value={join.leftColumn} onValueChange={(value) => updateJoinRule(join.id, 'leftColumn', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Left column" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {join.leftTable && getColumnsForTable(selectedTables.find(t => t.id === join.leftTable)?.name || '').map((column) => (
+                            <SelectItem key={column} value={column}>
+                              {column}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={join.rightColumn} onValueChange={(value) => updateJoinRule(join.id, 'rightColumn', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Right column" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {join.rightTable && getColumnsForTable(selectedTables.find(t => t.id === join.rightTable)?.name || '').map((column) => (
+                            <SelectItem key={column} value={column}>
+                              {column}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {joinRules.length === 0 && selectedTables.length >= 2 && (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  Click + to add join rules between tables
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Filters */}
+          <Card className="p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                <Filter className="w-5 h-5 mr-2 text-orange-600" />
+                Filters
+              </h2>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={addFilterRule}
+                disabled={selectedTables.length === 0}
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+
+            <div className="space-y-4 max-h-64 overflow-y-auto">
+              {filterRules.map((filter) => (
+                <div key={filter.id} className="border border-gray-200 rounded-lg p-3">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-sm font-medium">Filter Rule</span>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => removeFilterRule(filter.id)}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Select value={filter.table} onValueChange={(value) => updateFilterRule(filter.id, 'table', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select table" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedTables.map((table) => (
+                          <SelectItem key={table.id} value={table.id}>
+                            {table.alias}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={filter.column} onValueChange={(value) => updateFilterRule(filter.id, 'column', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select column" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filter.table && getColumnsForTable(selectedTables.find(t => t.id === filter.table)?.name || '').map((column) => (
+                          <SelectItem key={column} value={column}>
+                            {column}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={filter.operator} onValueChange={(value) => updateFilterRule(filter.id, 'operator', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select operator" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {operators.map((op) => (
+                          <SelectItem key={op.value} value={op.value}>
+                            {op.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Input 
+                      value={filter.value}
+                      onChange={(e) => updateFilterRule(filter.id, 'value', e.target.value)}
+                      placeholder="Enter filter value"
+                    />
+                  </div>
+                </div>
+              ))}
+              
+              {filterRules.length === 0 && selectedTables.length > 0 && (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  Click + to add filter conditions
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Report Configuration */}
+          <Card className="p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <BarChart3 className="w-5 h-5 mr-2 text-purple-600" />
+              Visualization
+            </h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Report Name
+                </label>
+                <Input 
+                  value={reportName}
+                  onChange={(e) => setReportName(e.target.value)}
+                  placeholder="Enter report name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Visualization Type
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {chartTypes.map((chart) => (
+                    <button
+                      key={chart.value}
+                      onClick={() => setSelectedChart(chart.value)}
+                      className={`p-3 border rounded-lg text-center transition-all ${
+                        selectedChart === chart.value
+                          ? 'border-purple-500 bg-purple-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="text-lg mb-1">{chart.icon}</div>
+                      <div className="text-xs font-medium">{chart.label}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h3 className="font-medium text-gray-800 mb-3">Export Options</h3>
+                <div className="space-y-2">
+                  <label className="flex items-center">
+                    <input type="checkbox" className="mr-2" defaultChecked />
+                    <span className="text-sm">Allow PDF export</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input type="checkbox" className="mr-2" defaultChecked />
+                    <span className="text-sm">Allow Excel export</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input type="checkbox" className="mr-2" />
+                    <span className="text-sm">Allow CSV export</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
