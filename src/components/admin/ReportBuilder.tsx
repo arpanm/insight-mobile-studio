@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { PromptReportBuilder } from './PromptReportBuilder';
 
 interface ReportBuilderProps {
@@ -44,7 +45,7 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
   const [reportName, setReportName] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [sqlQuery, setSqlQuery] = useState('');
-  const [mode, setMode] = useState<'visual' | 'sql' | 'prompt'>('visual');
+  const [activeTab, setActiveTab] = useState('visual');
 
   const availableTables = [
     { 
@@ -93,6 +94,71 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
     { value: 'gauge', label: 'Gauge Chart', icon: '⏱️' },
     { value: 'area', label: 'Area Chart', icon: '📉' }
   ];
+
+  // Render visualization section for all tabs
+  const renderVisualizationSection = () => (
+    <Card className="p-6">
+      <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+        <BarChart3 className="w-5 h-5 mr-2 text-purple-600" />
+        Visualization
+      </h2>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Report Name
+          </label>
+          <Input 
+            value={reportName}
+            onChange={(e) => setReportName(e.target.value)}
+            placeholder="Enter report name"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Visualization Type
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            {chartTypes.map((chart) => (
+              <button
+                key={chart.value}
+                onClick={() => setSelectedChart(chart.value)}
+                className={`p-3 border rounded-lg text-center transition-all ${
+                  selectedChart === chart.value
+                    ? 'border-purple-500 bg-purple-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="text-lg mb-1">{chart.icon}</div>
+                <div className="text-xs font-medium">{chart.label}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <Separator />
+
+        <div>
+          <h3 className="font-medium text-gray-800 mb-3">Export Options</h3>
+          <div className="space-y-2">
+            <label className="flex items-center">
+              <input type="checkbox" className="mr-2" defaultChecked />
+              <span className="text-sm">Allow PDF export</span>
+            </label>
+            <label className="flex items-center">
+              <input type="checkbox" className="mr-2" defaultChecked />
+              <span className="text-sm">Allow Excel export</span>
+            </label>
+            <label className="flex items-center">
+              <input type="checkbox" className="mr-2" />
+              <span className="text-sm">Allow CSV export</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
 
   const addTable = (tableValue: string) => {
     const table = availableTables.find(t => t.value === tableValue);
@@ -175,50 +241,6 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
     return table ? table.columns : [];
   };
 
-  // Add mode selection at the top
-  const renderModeSelector = () => (
-    <div className="flex gap-1 mb-6 p-1 bg-gray-100 rounded-lg w-fit">
-      <button
-        onClick={() => setMode('visual')}
-        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-          mode === 'visual'
-            ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-600 hover:text-gray-900'
-        }`}
-      >
-        <Database className="w-4 h-4 mr-2 inline" />
-        Visual Builder
-      </button>
-      <button
-        onClick={() => setMode('prompt')}
-        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-          mode === 'prompt'
-            ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-600 hover:text-gray-900'
-        }`}
-      >
-        <MessageSquare className="w-4 h-4 mr-2 inline" />
-        AI Prompt
-      </button>
-      <button
-        onClick={() => setMode('sql')}
-        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-          mode === 'sql'
-            ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-600 hover:text-gray-900'
-        }`}
-      >
-        <Code className="w-4 h-4 mr-2 inline" />
-        Advanced SQL
-      </button>
-    </div>
-  );
-
-  // Return early if prompt mode is selected
-  if (mode === 'prompt') {
-    return <PromptReportBuilder onSave={onSave} onPreview={onPreview} />;
-  }
-
   return (
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
@@ -228,14 +250,6 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
           <p className="text-gray-600 mt-2">Create custom reports with drag-and-drop interface</p>
         </div>
         <div className="flex gap-3">
-          <Button 
-            variant="outline" 
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="bg-gray-100"
-          >
-            <Code className="w-5 h-5 mr-2" />
-            {showAdvanced ? 'Simple Mode' : 'Advanced SQL'}
-          </Button>
           <Button variant="outline" onClick={onPreview}>
             <Eye className="w-5 h-5 mr-2" />
             Preview
@@ -247,371 +261,331 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
         </div>
       </div>
 
-      {/* Mode Selector */}
-      {renderModeSelector()}
+      {/* Tabs for different modes */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="visual" className="flex items-center gap-2">
+            <Database className="w-4 h-4" />
+            Visual Builder
+          </TabsTrigger>
+          <TabsTrigger value="prompt" className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            AI Prompt
+          </TabsTrigger>
+          <TabsTrigger value="sql" className="flex items-center gap-2">
+            <Code className="w-4 h-4" />
+            Advanced SQL
+          </TabsTrigger>
+        </TabsList>
 
-      {mode === 'sql' ? (
-        /* Advanced SQL Mode */
-        <Card className="p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Advanced SQL Query</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Report Name
-              </label>
-              <Input 
-                value={reportName}
-                onChange={(e) => setReportName(e.target.value)}
-                placeholder="Enter report name"
-              />
+        <TabsContent value="visual" className="mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Data Sources & Tables */}
+            <Card className="p-6">
+              <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                <Database className="w-5 h-5 mr-2 text-blue-600" />
+                Data Sources
+              </h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Add Table
+                  </label>
+                  <Select onValueChange={addTable}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select table to add" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableTables.map((table) => (
+                        <SelectItem key={table.value} value={table.value}>
+                          {table.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h3 className="font-medium text-gray-800 mb-3">Selected Tables</h3>
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {selectedTables.map((table) => (
+                      <div key={table.id} className="border border-gray-200 rounded-lg p-3">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="font-medium text-sm">{table.alias}</span>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => removeTable(table.id)}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-gray-600 mb-2">Select columns:</p>
+                          {getColumnsForTable(table.name).map((column) => (
+                            <label key={column} className="flex items-center">
+                              <input 
+                                type="checkbox"
+                                className="mr-2 text-xs"
+                                checked={table.selectedColumns.includes(column)}
+                                onChange={() => toggleColumn(table.id, column)}
+                              />
+                              <span className="text-xs">{column}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Join Rules */}
+            <Card className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                  <Link className="w-5 h-5 mr-2 text-green-600" />
+                  Table Joins
+                </h2>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={addJoinRule}
+                  disabled={selectedTables.length < 2}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-4 max-h-64 overflow-y-auto">
+                {joinRules.map((join) => (
+                  <div key={join.id} className="border border-gray-200 rounded-lg p-3">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-sm font-medium">Join Rule</span>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => removeJoinRule(join.id)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Select value={join.joinType} onValueChange={(value) => updateJoinRule(join.id, 'joinType', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Join type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {joinTypes.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <Select value={join.leftTable} onValueChange={(value) => updateJoinRule(join.id, 'leftTable', value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Left table" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {selectedTables.map((table) => (
+                              <SelectItem key={table.id} value={table.id}>
+                                {table.alias}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Select value={join.rightTable} onValueChange={(value) => updateJoinRule(join.id, 'rightTable', value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Right table" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {selectedTables.map((table) => (
+                              <SelectItem key={table.id} value={table.id}>
+                                {table.alias}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <Select value={join.leftColumn} onValueChange={(value) => updateJoinRule(join.id, 'leftColumn', value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Left column" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {join.leftTable && getColumnsForTable(selectedTables.find(t => t.id === join.leftTable)?.name || '').map((column) => (
+                              <SelectItem key={column} value={column}>
+                                {column}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Select value={join.rightColumn} onValueChange={(value) => updateJoinRule(join.id, 'rightColumn', value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Right column" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {join.rightTable && getColumnsForTable(selectedTables.find(t => t.id === join.rightTable)?.name || '').map((column) => (
+                              <SelectItem key={column} value={column}>
+                                {column}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                {joinRules.length === 0 && selectedTables.length >= 2 && (
+                  <div className="text-center py-4 text-gray-500 text-sm">
+                    Click + to add join rules between tables
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Filters */}
+            <Card className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                  <Filter className="w-5 h-5 mr-2 text-orange-600" />
+                  Filters
+                </h2>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={addFilterRule}
+                  disabled={selectedTables.length === 0}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-4 max-h-64 overflow-y-auto">
+                {filterRules.map((filter) => (
+                  <div key={filter.id} className="border border-gray-200 rounded-lg p-3">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-sm font-medium">Filter Rule</span>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => removeFilterRule(filter.id)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Select value={filter.table} onValueChange={(value) => updateFilterRule(filter.id, 'table', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select table" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedTables.map((table) => (
+                            <SelectItem key={table.id} value={table.id}>
+                              {table.alias}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={filter.column} onValueChange={(value) => updateFilterRule(filter.id, 'column', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select column" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filter.table && getColumnsForTable(selectedTables.find(t => t.id === filter.table)?.name || '').map((column) => (
+                            <SelectItem key={column} value={column}>
+                              {column}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={filter.operator} onValueChange={(value) => updateFilterRule(filter.id, 'operator', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select operator" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {operators.map((op) => (
+                            <SelectItem key={op.value} value={op.value}>
+                              {op.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Input 
+                        value={filter.value}
+                        onChange={(e) => updateFilterRule(filter.id, 'value', e.target.value)}
+                        placeholder="Enter filter value"
+                      />
+                    </div>
+                  </div>
+                ))}
+                
+                {filterRules.length === 0 && selectedTables.length > 0 && (
+                  <div className="text-center py-4 text-gray-500 text-sm">
+                    Click + to add filter conditions
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Visualization */}
+            {renderVisualizationSection()}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="prompt" className="mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="lg:col-span-3">
+              <PromptReportBuilder onSave={onSave} onPreview={onPreview} />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                SQL Query
-              </label>
-              <textarea
-                value={sqlQuery}
-                onChange={(e) => setSqlQuery(e.target.value)}
-                className="w-full h-64 p-4 border border-gray-300 rounded-lg font-mono text-sm"
-                placeholder="SELECT s.revenue, c.customer_name, p.product_name 
+            {renderVisualizationSection()}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="sql" className="mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="lg:col-span-3">
+              <Card className="p-6">
+                <h2 className="text-lg font-semibold text-gray-800 mb-4">Advanced SQL Query</h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      SQL Query
+                    </label>
+                    <textarea
+                      value={sqlQuery}
+                      onChange={(e) => setSqlQuery(e.target.value)}
+                      className="w-full h-64 p-4 border border-gray-300 rounded-lg font-mono text-sm"
+                      placeholder="SELECT s.revenue, c.customer_name, p.product_name 
 FROM sales s 
 LEFT JOIN customers c ON s.customer_id = c.customer_id
 LEFT JOIN products p ON s.product_id = p.product_id
 WHERE s.order_date >= '2024-01-01'"
-              />
-            </div>
-          </div>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Data Sources & Tables */}
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-              <Database className="w-5 h-5 mr-2 text-blue-600" />
-              Data Sources
-            </h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Add Table
-                </label>
-                <Select onValueChange={addTable}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select table to add" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableTables.map((table) => (
-                      <SelectItem key={table.value} value={table.value}>
-                        {table.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Separator />
-
-              <div>
-                <h3 className="font-medium text-gray-800 mb-3">Selected Tables</h3>
-                <div className="space-y-3 max-h-64 overflow-y-auto">
-                  {selectedTables.map((table) => (
-                    <div key={table.id} className="border border-gray-200 rounded-lg p-3">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium text-sm">{table.alias}</span>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => removeTable(table.id)}
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs text-gray-600 mb-2">Select columns:</p>
-                        {getColumnsForTable(table.name).map((column) => (
-                          <label key={column} className="flex items-center">
-                            <input 
-                              type="checkbox"
-                              className="mr-2 text-xs"
-                              checked={table.selectedColumns.includes(column)}
-                              onChange={() => toggleColumn(table.id, column)}
-                            />
-                            <span className="text-xs">{column}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Join Rules */}
-          <Card className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-800 flex items-center">
-                <Link className="w-5 h-5 mr-2 text-green-600" />
-                Table Joins
-              </h2>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={addJoinRule}
-                disabled={selectedTables.length < 2}
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
-
-            <div className="space-y-4 max-h-64 overflow-y-auto">
-              {joinRules.map((join) => (
-                <div key={join.id} className="border border-gray-200 rounded-lg p-3">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-sm font-medium">Join Rule</span>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => removeJoinRule(join.id)}
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Select value={join.joinType} onValueChange={(value) => updateJoinRule(join.id, 'joinType', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Join type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {joinTypes.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <Select value={join.leftTable} onValueChange={(value) => updateJoinRule(join.id, 'leftTable', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Left table" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {selectedTables.map((table) => (
-                            <SelectItem key={table.id} value={table.id}>
-                              {table.alias}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Select value={join.rightTable} onValueChange={(value) => updateJoinRule(join.id, 'rightTable', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Right table" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {selectedTables.map((table) => (
-                            <SelectItem key={table.id} value={table.id}>
-                              {table.alias}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <Select value={join.leftColumn} onValueChange={(value) => updateJoinRule(join.id, 'leftColumn', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Left column" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {join.leftTable && getColumnsForTable(selectedTables.find(t => t.id === join.leftTable)?.name || '').map((column) => (
-                            <SelectItem key={column} value={column}>
-                              {column}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Select value={join.rightColumn} onValueChange={(value) => updateJoinRule(join.id, 'rightColumn', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Right column" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {join.rightTable && getColumnsForTable(selectedTables.find(t => t.id === join.rightTable)?.name || '').map((column) => (
-                            <SelectItem key={column} value={column}>
-                              {column}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              
-              {joinRules.length === 0 && selectedTables.length >= 2 && (
-                <div className="text-center py-4 text-gray-500 text-sm">
-                  Click + to add join rules between tables
-                </div>
-              )}
-            </div>
-          </Card>
-
-          {/* Filters */}
-          <Card className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-800 flex items-center">
-                <Filter className="w-5 h-5 mr-2 text-orange-600" />
-                Filters
-              </h2>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={addFilterRule}
-                disabled={selectedTables.length === 0}
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
-
-            <div className="space-y-4 max-h-64 overflow-y-auto">
-              {filterRules.map((filter) => (
-                <div key={filter.id} className="border border-gray-200 rounded-lg p-3">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-sm font-medium">Filter Rule</span>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => removeFilterRule(filter.id)}
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Select value={filter.table} onValueChange={(value) => updateFilterRule(filter.id, 'table', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select table" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {selectedTables.map((table) => (
-                          <SelectItem key={table.id} value={table.id}>
-                            {table.alias}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <Select value={filter.column} onValueChange={(value) => updateFilterRule(filter.id, 'column', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select column" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filter.table && getColumnsForTable(selectedTables.find(t => t.id === filter.table)?.name || '').map((column) => (
-                          <SelectItem key={column} value={column}>
-                            {column}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <Select value={filter.operator} onValueChange={(value) => updateFilterRule(filter.id, 'operator', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select operator" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {operators.map((op) => (
-                          <SelectItem key={op.value} value={op.value}>
-                            {op.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <Input 
-                      value={filter.value}
-                      onChange={(e) => updateFilterRule(filter.id, 'value', e.target.value)}
-                      placeholder="Enter filter value"
                     />
                   </div>
                 </div>
-              ))}
-              
-              {filterRules.length === 0 && selectedTables.length > 0 && (
-                <div className="text-center py-4 text-gray-500 text-sm">
-                  Click + to add filter conditions
-                </div>
-              )}
+              </Card>
             </div>
-          </Card>
-
-          {/* Report Configuration */}
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-              <BarChart3 className="w-5 h-5 mr-2 text-purple-600" />
-              Visualization
-            </h2>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Report Name
-                </label>
-                <Input 
-                  value={reportName}
-                  onChange={(e) => setReportName(e.target.value)}
-                  placeholder="Enter report name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Visualization Type
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {chartTypes.map((chart) => (
-                    <button
-                      key={chart.value}
-                      onClick={() => setSelectedChart(chart.value)}
-                      className={`p-3 border rounded-lg text-center transition-all ${
-                        selectedChart === chart.value
-                          ? 'border-purple-500 bg-purple-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="text-lg mb-1">{chart.icon}</div>
-                      <div className="text-xs font-medium">{chart.label}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <Separator />
-
-              <div>
-                <h3 className="font-medium text-gray-800 mb-3">Export Options</h3>
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" defaultChecked />
-                    <span className="text-sm">Allow PDF export</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" defaultChecked />
-                    <span className="text-sm">Allow Excel export</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2" />
-                    <span className="text-sm">Allow CSV export</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
+            {renderVisualizationSection()}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
