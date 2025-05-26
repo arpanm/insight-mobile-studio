@@ -81,7 +81,7 @@ export const MobilePreviewDashboards = () => {
               <h3 className="text-sm font-medium mb-2 flex items-center">
                 <TrendingUp className="w-4 h-4 mr-1" />
                 Revenue Trend
-                <Target className="w-3 h-3 ml-2 text-red-500" title="Drill-down available" />
+                <Target className="w-3 h-3 ml-2 text-red-500" />
               </h3>
               <ResponsiveContainer width="100%" height={120}>
                 <LineChart data={salesData}>
@@ -159,7 +159,7 @@ export const MobilePreviewDashboards = () => {
               <h3 className="text-sm font-medium mb-2 flex items-center">
                 <BarChart3 className="w-4 h-4 mr-1" />
                 Monthly Sales
-                <Target className="w-3 h-3 ml-2 text-red-500" title="Drill-down available" />
+                <Target className="w-3 h-3 ml-2 text-red-500" />
               </h3>
               <ResponsiveContainer width="100%" height={120}>
                 <BarChart data={salesData}>
@@ -210,7 +210,7 @@ export const MobilePreviewDashboards = () => {
               <h3 className="text-sm font-medium mb-2 flex items-center">
                 <Users className="w-4 h-4 mr-1" />
                 Customer Distribution
-                <Target className="w-3 h-3 ml-2 text-red-500" title="Drill-down available" />
+                <Target className="w-3 h-3 ml-2 text-red-500" />
               </h3>
               <ResponsiveContainer width="100%" height={120}>
                 <BarChart data={customerData}>
