@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Database, Link, Filter, BarChart3, Save, Eye, Plus, X, Code, ChevronDown, MessageSquare } from 'lucide-react';
+import { Database, Link, Filter, BarChart3, Save, Eye, Plus, X, Code, ChevronDown, MessageSquare, Layers, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { PromptReportBuilder } from './PromptReportBuilder';
+import { ReportPreview } from './ReportPreview';
 
 interface ReportBuilderProps {
   onSave: () => void;
@@ -37,15 +38,42 @@ interface FilterRule {
   value: string;
 }
 
+interface DrillDownRule {
+  id: string;
+  fromColumn: string;
+  toTable: string;
+  toColumn: string;
+  label: string;
+}
+
+interface ChartConfig {
+  xAxis?: string;
+  yAxis?: string;
+  groupBy?: string;
+  aggregation?: string;
+  colorBy?: string;
+  valueColumn?: string;
+  labelColumn?: string;
+  showLegend?: boolean;
+  showDataLabels?: boolean;
+  stacked?: boolean;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  maxItems?: number;
+}
+
 export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
   const [selectedTables, setSelectedTables] = useState<SelectedTable[]>([]);
   const [joinRules, setJoinRules] = useState<JoinRule[]>([]);
   const [filterRules, setFilterRules] = useState<FilterRule[]>([]);
+  const [drillDownRules, setDrillDownRules] = useState<DrillDownRule[]>([]);
   const [selectedChart, setSelectedChart] = useState('');
+  const [chartConfig, setChartConfig] = useState<ChartConfig>({});
   const [reportName, setReportName] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [sqlQuery, setSqlQuery] = useState('');
   const [activeTab, setActiveTab] = useState('visual');
+  const [showPreview, setShowPreview] = useState(false);
 
   const availableTables = [
     { 
@@ -95,6 +123,242 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
     { value: 'area', label: 'Area Chart', icon: '📉' }
   ];
 
+  const aggregationTypes = [
+    { value: 'sum', label: 'Sum' },
+    { value: 'avg', label: 'Average' },
+    { value: 'count', label: 'Count' },
+    { value: 'max', label: 'Maximum' },
+    { value: 'min', label: 'Minimum' }
+  ];
+
+  // Drill-down functions
+  const addDrillDownRule = () => {
+    const newDrillDown: DrillDownRule = {
+      id: Date.now().toString(),
+      fromColumn: '',
+      toTable: '',
+      toColumn: '',
+      label: ''
+    };
+    setDrillDownRules([...drillDownRules, newDrillDown]);
+  };
+
+  const updateDrillDownRule = (drillDownId: string, field: keyof DrillDownRule, value: string) => {
+    setDrillDownRules(drillDownRules.map(rule => 
+      rule.id === drillDownId ? { ...rule, [field]: value } : rule
+    ));
+  };
+
+  const removeDrillDownRule = (drillDownId: string) => {
+    setDrillDownRules(drillDownRules.filter(r => r.id !== drillDownId));
+  };
+
+  // Chart configuration functions
+  const updateChartConfig = (field: keyof ChartConfig, value: any) => {
+    setChartConfig({ ...chartConfig, [field]: value });
+  };
+
+  const getAllSelectedColumns = () => {
+    return selectedTables.flatMap(table => 
+      table.selectedColumns.map(col => ({ table: table.name, column: col }))
+    );
+  };
+
+  const renderChartSpecificInputs = () => {
+    const allColumns = getAllSelectedColumns();
+    
+    if (!selectedChart) return null;
+
+    switch (selectedChart) {
+      case 'bar':
+      case 'line':
+      case 'area':
+        return (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">X-Axis</label>
+                <Select value={chartConfig.xAxis} onValueChange={(value) => updateChartConfig('xAxis', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select X-axis column" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allColumns.map((col, idx) => (
+                      <SelectItem key={idx} value={`${col.table}.${col.column}`}>
+                        {col.table}.{col.column}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Y-Axis</label>
+                <Select value={chartConfig.yAxis} onValueChange={(value) => updateChartConfig('yAxis', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Y-axis column" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allColumns.map((col, idx) => (
+                      <SelectItem key={idx} value={`${col.table}.${col.column}`}>
+                        {col.table}.{col.column}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Aggregation</label>
+                <Select value={chartConfig.aggregation} onValueChange={(value) => updateChartConfig('aggregation', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select aggregation" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {aggregationTypes.map((agg) => (
+                      <SelectItem key={agg.value} value={agg.value}>
+                        {agg.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Group By</label>
+                <Select value={chartConfig.groupBy} onValueChange={(value) => updateChartConfig('groupBy', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Group by column" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allColumns.map((col, idx) => (
+                      <SelectItem key={idx} value={`${col.table}.${col.column}`}>
+                        {col.table}.{col.column}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {selectedChart === 'bar' && (
+              <div className="flex items-center space-x-2">
+                <input 
+                  type="checkbox" 
+                  id="stacked"
+                  checked={chartConfig.stacked || false}
+                  onChange={(e) => updateChartConfig('stacked', e.target.checked)}
+                />
+                <label htmlFor="stacked" className="text-sm">Stacked bars</label>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'pie':
+        return (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Value Column</label>
+              <Select value={chartConfig.valueColumn} onValueChange={(value) => updateChartConfig('valueColumn', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select value column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allColumns.map((col, idx) => (
+                    <SelectItem key={idx} value={`${col.table}.${col.column}`}>
+                      {col.table}.{col.column}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Label Column</label>
+              <Select value={chartConfig.labelColumn} onValueChange={(value) => updateChartConfig('labelColumn', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select label column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allColumns.map((col, idx) => (
+                    <SelectItem key={idx} value={`${col.table}.${col.column}`}>
+                      {col.table}.{col.column}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        );
+
+      case 'gauge':
+        return (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Value Column</label>
+              <Select value={chartConfig.valueColumn} onValueChange={(value) => updateChartConfig('valueColumn', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select value column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allColumns.map((col, idx) => (
+                    <SelectItem key={idx} value={`${col.table}.${col.column}`}>
+                      {col.table}.{col.column}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        );
+
+      case 'table':
+        return (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+                <Select value={chartConfig.sortBy} onValueChange={(value) => updateChartConfig('sortBy', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sort by column" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allColumns.map((col, idx) => (
+                      <SelectItem key={idx} value={`${col.table}.${col.column}`}>
+                        {col.table}.{col.column}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
+                <Select value={chartConfig.sortOrder} onValueChange={(value) => updateChartConfig('sortOrder', value as 'asc' | 'desc')}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sort order" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asc">Ascending</SelectItem>
+                    <SelectItem value="desc">Descending</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Max Items</label>
+              <Input 
+                type="number"
+                value={chartConfig.maxItems || ''}
+                onChange={(e) => updateChartConfig('maxItems', parseInt(e.target.value) || undefined)}
+                placeholder="Limit number of rows"
+              />
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   // Render visualization section for all tabs
   const renderVisualizationSection = () => (
     <Card className="p-6">
@@ -134,6 +398,42 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
                 <div className="text-xs font-medium">{chart.label}</div>
               </button>
             ))}
+          </div>
+        </div>
+
+        {selectedChart && (
+          <>
+            <Separator />
+            <div>
+              <h3 className="font-medium text-gray-800 mb-3">Chart Configuration</h3>
+              {renderChartSpecificInputs()}
+            </div>
+          </>
+        )}
+
+        <Separator />
+
+        <div>
+          <h3 className="font-medium text-gray-800 mb-3">Display Options</h3>
+          <div className="space-y-2">
+            <label className="flex items-center">
+              <input 
+                type="checkbox" 
+                className="mr-2" 
+                checked={chartConfig.showLegend || false}
+                onChange={(e) => updateChartConfig('showLegend', e.target.checked)}
+              />
+              <span className="text-sm">Show legend</span>
+            </label>
+            <label className="flex items-center">
+              <input 
+                type="checkbox" 
+                className="mr-2" 
+                checked={chartConfig.showDataLabels || false}
+                onChange={(e) => updateChartConfig('showDataLabels', e.target.checked)}
+              />
+              <span className="text-sm">Show data labels</span>
+            </label>
           </div>
         </div>
 
@@ -241,6 +541,27 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
     return table ? table.columns : [];
   };
 
+  const handlePreview = () => {
+    setShowPreview(true);
+  };
+
+  if (showPreview) {
+    return (
+      <ReportPreview 
+        reportName={reportName}
+        chartType={selectedChart}
+        chartConfig={chartConfig}
+        selectedTables={selectedTables}
+        joinRules={joinRules}
+        filterRules={filterRules}
+        drillDownRules={drillDownRules}
+        sqlQuery={sqlQuery}
+        onBack={() => setShowPreview(false)}
+        onSave={onSave}
+      />
+    );
+  }
+
   return (
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
@@ -250,11 +571,11 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
           <p className="text-gray-600 mt-2">Create custom reports with drag-and-drop interface</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={onPreview}>
+          <Button variant="outline" onClick={handlePreview} disabled={!selectedChart}>
             <Eye className="w-5 h-5 mr-2" />
             Preview
           </Button>
-          <Button onClick={onSave} className="bg-green-600 hover:bg-green-700">
+          <Button onClick={onSave} className="bg-green-600 hover:bg-green-700" disabled={!reportName || !selectedChart}>
             <Save className="w-5 h-5 mr-2" />
             Save Report
           </Button>
@@ -279,7 +600,7 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
         </TabsList>
 
         <TabsContent value="visual" className="mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             {/* Data Sources & Tables */}
             <Card className="p-6">
               <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
@@ -539,6 +860,94 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
                 {filterRules.length === 0 && selectedTables.length > 0 && (
                   <div className="text-center py-4 text-gray-500 text-sm">
                     Click + to add filter conditions
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Drill-Down Rules */}
+            <Card className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                  <Target className="w-5 h-5 mr-2 text-red-600" />
+                  Drill-Down
+                </h2>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={addDrillDownRule}
+                  disabled={selectedTables.length === 0}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-4 max-h-64 overflow-y-auto">
+                {drillDownRules.map((drillDown) => (
+                  <div key={drillDown.id} className="border border-gray-200 rounded-lg p-3">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-sm font-medium">Drill-Down Rule</span>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => removeDrillDownRule(drillDown.id)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Input 
+                        value={drillDown.label}
+                        onChange={(e) => updateDrillDownRule(drillDown.id, 'label', e.target.value)}
+                        placeholder="Drill-down label"
+                      />
+
+                      <Select value={drillDown.fromColumn} onValueChange={(value) => updateDrillDownRule(drillDown.id, 'fromColumn', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="From column" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getAllSelectedColumns().map((col, idx) => (
+                            <SelectItem key={idx} value={`${col.table}.${col.column}`}>
+                              {col.table}.{col.column}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={drillDown.toTable} onValueChange={(value) => updateDrillDownRule(drillDown.id, 'toTable', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="To table" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableTables.map((table) => (
+                            <SelectItem key={table.value} value={table.value}>
+                              {table.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={drillDown.toColumn} onValueChange={(value) => updateDrillDownRule(drillDown.id, 'toColumn', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="To column" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {drillDown.toTable && getColumnsForTable(drillDown.toTable).map((column) => (
+                            <SelectItem key={column} value={column}>
+                              {column}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                ))}
+                
+                {drillDownRules.length === 0 && selectedTables.length > 0 && (
+                  <div className="text-center py-4 text-gray-500 text-sm">
+                    Click + to add drill-down rules
                   </div>
                 )}
               </div>
