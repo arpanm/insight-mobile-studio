@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { PromptReportBuilder } from './PromptReportBuilder';
 import { ReportPreview } from './ReportPreview';
 
@@ -131,7 +132,6 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
     { value: 'min', label: 'Minimum' }
   ];
 
-  // Drill-down functions
   const addDrillDownRule = () => {
     const newDrillDown: DrillDownRule = {
       id: Date.now().toString(),
@@ -153,7 +153,6 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
     setDrillDownRules(drillDownRules.filter(r => r.id !== drillDownId));
   };
 
-  // Chart configuration functions
   const updateChartConfig = (field: keyof ChartConfig, value: any) => {
     setChartConfig({ ...chartConfig, [field]: value });
   };
@@ -359,7 +358,6 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
     }
   };
 
-  // Render visualization section for all tabs
   const renderVisualizationSection = () => (
     <Card className="p-6">
       <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
@@ -456,94 +454,99 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
             </label>
           </div>
         </div>
+
+        <Separator />
+
+        {/* Drill-Down Configuration for all tabs */}
+        <div>
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="font-medium text-gray-800 flex items-center">
+              <Target className="w-4 h-4 mr-2 text-red-600" />
+              Drill-Down Rules
+            </h3>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={addDrillDownRule}
+              disabled={selectedTables.length === 0}
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <div className="space-y-3 max-h-48 overflow-y-auto">
+            {drillDownRules.map((drillDown) => (
+              <div key={drillDown.id} className="border border-gray-200 rounded-lg p-3">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-sm font-medium">Drill-Down Rule</span>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => removeDrillDownRule(drillDown.id)}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+                
+                <div className="space-y-2">
+                  <Input 
+                    value={drillDown.label}
+                    onChange={(e) => updateDrillDownRule(drillDown.id, 'label', e.target.value)}
+                    placeholder="Drill-down label"
+                  />
+
+                  <Select value={drillDown.fromColumn} onValueChange={(value) => updateDrillDownRule(drillDown.id, 'fromColumn', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="From column" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getAllSelectedColumns().map((col, idx) => (
+                        <SelectItem key={idx} value={`${col.table}.${col.column}`}>
+                          {col.table}.{col.column}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={drillDown.toTable} onValueChange={(value) => updateDrillDownRule(drillDown.id, 'toTable', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="To table" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableTables.map((table) => (
+                        <SelectItem key={table.value} value={table.value}>
+                          {table.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={drillDown.toColumn} onValueChange={(value) => updateDrillDownRule(drillDown.id, 'toColumn', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="To column" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {drillDown.toTable && getColumnsForTable(drillDown.toTable).map((column) => (
+                        <SelectItem key={column} value={column}>
+                          {column}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            ))}
+            
+            {drillDownRules.length === 0 && selectedTables.length > 0 && (
+              <div className="text-center py-4 text-gray-500 text-sm">
+                Click + to add drill-down rules
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </Card>
   );
-
-  const addTable = (tableValue: string) => {
-    const table = availableTables.find(t => t.value === tableValue);
-    if (table && !selectedTables.find(t => t.name === tableValue)) {
-      const newTable: SelectedTable = {
-        id: Date.now().toString(),
-        name: tableValue,
-        alias: table.label,
-        selectedColumns: []
-      };
-      setSelectedTables([...selectedTables, newTable]);
-    }
-  };
-
-  const removeTable = (tableId: string) => {
-    setSelectedTables(selectedTables.filter(t => t.id !== tableId));
-    setJoinRules(joinRules.filter(j => j.leftTable !== tableId && j.rightTable !== tableId));
-    setFilterRules(filterRules.filter(f => f.table !== tableId));
-  };
-
-  const toggleColumn = (tableId: string, column: string) => {
-    setSelectedTables(selectedTables.map(table => {
-      if (table.id === tableId) {
-        const columns = table.selectedColumns.includes(column)
-          ? table.selectedColumns.filter(c => c !== column)
-          : [...table.selectedColumns, column];
-        return { ...table, selectedColumns: columns };
-      }
-      return table;
-    }));
-  };
-
-  const addJoinRule = () => {
-    if (selectedTables.length >= 2) {
-      const newJoin: JoinRule = {
-        id: Date.now().toString(),
-        leftTable: '',
-        leftColumn: '',
-        rightTable: '',
-        rightColumn: '',
-        joinType: 'inner'
-      };
-      setJoinRules([...joinRules, newJoin]);
-    }
-  };
-
-  const updateJoinRule = (joinId: string, field: keyof JoinRule, value: string) => {
-    setJoinRules(joinRules.map(join => 
-      join.id === joinId ? { ...join, [field]: value } : join
-    ));
-  };
-
-  const removeJoinRule = (joinId: string) => {
-    setJoinRules(joinRules.filter(j => j.id !== joinId));
-  };
-
-  const addFilterRule = () => {
-    const newFilter: FilterRule = {
-      id: Date.now().toString(),
-      table: '',
-      column: '',
-      operator: 'equals',
-      value: ''
-    };
-    setFilterRules([...filterRules, newFilter]);
-  };
-
-  const updateFilterRule = (filterId: string, field: keyof FilterRule, value: string) => {
-    setFilterRules(filterRules.map(filter => 
-      filter.id === filterId ? { ...filter, [field]: value } : filter
-    ));
-  };
-
-  const removeFilterRule = (filterId: string) => {
-    setFilterRules(filterRules.filter(f => f.id !== filterId));
-  };
-
-  const getColumnsForTable = (tableName: string) => {
-    const table = availableTables.find(t => t.value === tableName);
-    return table ? table.columns : [];
-  };
-
-  const handlePreview = () => {
-    setShowPreview(true);
-  };
 
   if (showPreview) {
     return (
@@ -600,361 +603,307 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
         </TabsList>
 
         <TabsContent value="visual" className="mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            {/* Data Sources & Tables */}
-            <Card className="p-6">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                <Database className="w-5 h-5 mr-2 text-blue-600" />
-                Data Sources
-              </h2>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Add Table
-                  </label>
-                  <Select onValueChange={addTable}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select table to add" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableTables.map((table) => (
-                        <SelectItem key={table.value} value={table.value}>
-                          {table.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Separator />
-
-                <div>
-                  <h3 className="font-medium text-gray-800 mb-3">Selected Tables</h3>
-                  <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {selectedTables.map((table) => (
-                      <div key={table.id} className="border border-gray-200 rounded-lg p-3">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="font-medium text-sm">{table.alias}</span>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => removeTable(table.id)}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Left side with accordions */}
+            <div className="lg:col-span-3">
+              <Accordion type="multiple" defaultValue={["data-sources", "visualization"]} className="space-y-4">
+                {/* Data Sources */}
+                <AccordionItem value="data-sources">
+                  <Card>
+                    <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                      <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                        <Database className="w-5 h-5 mr-2 text-blue-600" />
+                        Data Sources
+                      </h2>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-6">
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Add Table
+                          </label>
+                          <Select onValueChange={addTable}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select table to add" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableTables.map((table) => (
+                                <SelectItem key={table.value} value={table.value}>
+                                  {table.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-xs text-gray-600 mb-2">Select columns:</p>
-                          {getColumnsForTable(table.name).map((column) => (
-                            <label key={column} className="flex items-center">
-                              <input 
-                                type="checkbox"
-                                className="mr-2 text-xs"
-                                checked={table.selectedColumns.includes(column)}
-                                onChange={() => toggleColumn(table.id, column)}
+
+                        <Separator />
+
+                        <div>
+                          <h3 className="font-medium text-gray-800 mb-3">Selected Tables</h3>
+                          <div className="space-y-3">
+                            {selectedTables.map((table) => (
+                              <div key={table.id} className="border border-gray-200 rounded-lg p-3">
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="font-medium text-sm">{table.alias}</span>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => removeTable(table.id)}
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-xs text-gray-600 mb-2">Select columns:</p>
+                                  <div className="grid grid-cols-2 gap-1">
+                                    {getColumnsForTable(table.name).map((column) => (
+                                      <label key={column} className="flex items-center text-xs">
+                                        <input 
+                                          type="checkbox"
+                                          className="mr-2"
+                                          checked={table.selectedColumns.includes(column)}
+                                          onChange={() => toggleColumn(table.id, column)}
+                                        />
+                                        <span className="truncate">{column}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </Card>
+                </AccordionItem>
+
+                {/* Table Joins */}
+                <AccordionItem value="joins">
+                  <Card>
+                    <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                      <div className="flex justify-between items-center w-full mr-4">
+                        <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                          <Link className="w-5 h-5 mr-2 text-green-600" />
+                          Table Joins
+                        </h2>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={addJoinRule}
+                          disabled={selectedTables.length < 2}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-6">
+                      <div className="space-y-4">
+                        {joinRules.map((join) => (
+                          <div key={join.id} className="border border-gray-200 rounded-lg p-3">
+                            <div className="flex justify-between items-center mb-3">
+                              <span className="text-sm font-medium">Join Rule</span>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => removeJoinRule(join.id)}
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Select value={join.joinType} onValueChange={(value) => updateJoinRule(join.id, 'joinType', value)}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Join type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {joinTypes.map((type) => (
+                                    <SelectItem key={type.value} value={type.value}>
+                                      {type.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+
+                              <div className="grid grid-cols-2 gap-2">
+                                <Select value={join.leftTable} onValueChange={(value) => updateJoinRule(join.id, 'leftTable', value)}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Left table" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {selectedTables.map((table) => (
+                                      <SelectItem key={table.id} value={table.id}>
+                                        {table.alias}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+
+                                <Select value={join.rightTable} onValueChange={(value) => updateJoinRule(join.id, 'rightTable', value)}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Right table" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {selectedTables.map((table) => (
+                                      <SelectItem key={table.id} value={table.id}>
+                                        {table.alias}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2">
+                                <Select value={join.leftColumn} onValueChange={(value) => updateJoinRule(join.id, 'leftColumn', value)}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Left column" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {join.leftTable && getColumnsForTable(selectedTables.find(t => t.id === join.leftTable)?.name || '').map((column) => (
+                                      <SelectItem key={column} value={column}>
+                                        {column}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+
+                                <Select value={join.rightColumn} onValueChange={(value) => updateJoinRule(join.id, 'rightColumn', value)}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Right column" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {join.rightTable && getColumnsForTable(selectedTables.find(t => t.id === join.rightTable)?.name || '').map((column) => (
+                                      <SelectItem key={column} value={column}>
+                                        {column}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {joinRules.length === 0 && selectedTables.length >= 2 && (
+                          <div className="text-center py-4 text-gray-500 text-sm">
+                            Click + to add join rules between tables
+                          </div>
+                        )}
+                      </div>
+                    </AccordionContent>
+                  </Card>
+                </AccordionItem>
+
+                {/* Filters */}
+                <AccordionItem value="filters">
+                  <Card>
+                    <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                      <div className="flex justify-between items-center w-full mr-4">
+                        <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                          <Filter className="w-5 h-5 mr-2 text-orange-600" />
+                          Filters
+                        </h2>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={addFilterRule}
+                          disabled={selectedTables.length === 0}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-6">
+                      <div className="space-y-4">
+                        {filterRules.map((filter) => (
+                          <div key={filter.id} className="border border-gray-200 rounded-lg p-3">
+                            <div className="flex justify-between items-center mb-3">
+                              <span className="text-sm font-medium">Filter Rule</span>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => removeFilterRule(filter.id)}
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Select value={filter.table} onValueChange={(value) => updateFilterRule(filter.id, 'table', value)}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select table" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {selectedTables.map((table) => (
+                                    <SelectItem key={table.id} value={table.id}>
+                                      {table.alias}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+
+                              <Select value={filter.column} onValueChange={(value) => updateFilterRule(filter.id, 'column', value)}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select column" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {filter.table && getColumnsForTable(selectedTables.find(t => t.id === filter.table)?.name || '').map((column) => (
+                                    <SelectItem key={column} value={column}>
+                                      {column}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+
+                              <Select value={filter.operator} onValueChange={(value) => updateFilterRule(filter.id, 'operator', value)}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select operator" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {operators.map((op) => (
+                                    <SelectItem key={op.value} value={op.value}>
+                                      {op.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+
+                              <Input 
+                                value={filter.value}
+                                onChange={(e) => updateFilterRule(filter.id, 'value', e.target.value)}
+                                placeholder="Enter filter value"
                               />
-                              <span className="text-xs">{column}</span>
-                            </label>
-                          ))}
-                        </div>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {filterRules.length === 0 && selectedTables.length > 0 && (
+                          <div className="text-center py-4 text-gray-500 text-sm">
+                            Click + to add filter conditions
+                          </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </Card>
+                    </AccordionContent>
+                  </Card>
+                </AccordionItem>
 
-            {/* Join Rules */}
-            <Card className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-gray-800 flex items-center">
-                  <Link className="w-5 h-5 mr-2 text-green-600" />
-                  Table Joins
-                </h2>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={addJoinRule}
-                  disabled={selectedTables.length < 2}
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-
-              <div className="space-y-4 max-h-64 overflow-y-auto">
-                {joinRules.map((join) => (
-                  <div key={join.id} className="border border-gray-200 rounded-lg p-3">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-sm font-medium">Join Rule</span>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => removeJoinRule(join.id)}
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Select value={join.joinType} onValueChange={(value) => updateJoinRule(join.id, 'joinType', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Join type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {joinTypes.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <Select value={join.leftTable} onValueChange={(value) => updateJoinRule(join.id, 'leftTable', value)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Left table" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {selectedTables.map((table) => (
-                              <SelectItem key={table.id} value={table.id}>
-                                {table.alias}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-
-                        <Select value={join.rightTable} onValueChange={(value) => updateJoinRule(join.id, 'rightTable', value)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Right table" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {selectedTables.map((table) => (
-                              <SelectItem key={table.id} value={table.id}>
-                                {table.alias}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <Select value={join.leftColumn} onValueChange={(value) => updateJoinRule(join.id, 'leftColumn', value)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Left column" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {join.leftTable && getColumnsForTable(selectedTables.find(t => t.id === join.leftTable)?.name || '').map((column) => (
-                              <SelectItem key={column} value={column}>
-                                {column}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-
-                        <Select value={join.rightColumn} onValueChange={(value) => updateJoinRule(join.id, 'rightColumn', value)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Right column" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {join.rightTable && getColumnsForTable(selectedTables.find(t => t.id === join.rightTable)?.name || '').map((column) => (
-                              <SelectItem key={column} value={column}>
-                                {column}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                
-                {joinRules.length === 0 && selectedTables.length >= 2 && (
-                  <div className="text-center py-4 text-gray-500 text-sm">
-                    Click + to add join rules between tables
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            {/* Filters */}
-            <Card className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-gray-800 flex items-center">
-                  <Filter className="w-5 h-5 mr-2 text-orange-600" />
-                  Filters
-                </h2>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={addFilterRule}
-                  disabled={selectedTables.length === 0}
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-
-              <div className="space-y-4 max-h-64 overflow-y-auto">
-                {filterRules.map((filter) => (
-                  <div key={filter.id} className="border border-gray-200 rounded-lg p-3">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-sm font-medium">Filter Rule</span>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => removeFilterRule(filter.id)}
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Select value={filter.table} onValueChange={(value) => updateFilterRule(filter.id, 'table', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select table" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {selectedTables.map((table) => (
-                            <SelectItem key={table.id} value={table.id}>
-                              {table.alias}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Select value={filter.column} onValueChange={(value) => updateFilterRule(filter.id, 'column', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select column" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {filter.table && getColumnsForTable(selectedTables.find(t => t.id === filter.table)?.name || '').map((column) => (
-                            <SelectItem key={column} value={column}>
-                              {column}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Select value={filter.operator} onValueChange={(value) => updateFilterRule(filter.id, 'operator', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select operator" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {operators.map((op) => (
-                            <SelectItem key={op.value} value={op.value}>
-                              {op.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Input 
-                        value={filter.value}
-                        onChange={(e) => updateFilterRule(filter.id, 'value', e.target.value)}
-                        placeholder="Enter filter value"
-                      />
-                    </div>
-                  </div>
-                ))}
-                
-                {filterRules.length === 0 && selectedTables.length > 0 && (
-                  <div className="text-center py-4 text-gray-500 text-sm">
-                    Click + to add filter conditions
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            {/* Drill-Down Rules */}
-            <Card className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-gray-800 flex items-center">
-                  <Target className="w-5 h-5 mr-2 text-red-600" />
-                  Drill-Down
-                </h2>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={addDrillDownRule}
-                  disabled={selectedTables.length === 0}
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-
-              <div className="space-y-4 max-h-64 overflow-y-auto">
-                {drillDownRules.map((drillDown) => (
-                  <div key={drillDown.id} className="border border-gray-200 rounded-lg p-3">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-sm font-medium">Drill-Down Rule</span>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => removeDrillDownRule(drillDown.id)}
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Input 
-                        value={drillDown.label}
-                        onChange={(e) => updateDrillDownRule(drillDown.id, 'label', e.target.value)}
-                        placeholder="Drill-down label"
-                      />
-
-                      <Select value={drillDown.fromColumn} onValueChange={(value) => updateDrillDownRule(drillDown.id, 'fromColumn', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="From column" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getAllSelectedColumns().map((col, idx) => (
-                            <SelectItem key={idx} value={`${col.table}.${col.column}`}>
-                              {col.table}.{col.column}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Select value={drillDown.toTable} onValueChange={(value) => updateDrillDownRule(drillDown.id, 'toTable', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="To table" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableTables.map((table) => (
-                            <SelectItem key={table.value} value={table.value}>
-                              {table.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Select value={drillDown.toColumn} onValueChange={(value) => updateDrillDownRule(drillDown.id, 'toColumn', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="To column" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {drillDown.toTable && getColumnsForTable(drillDown.toTable).map((column) => (
-                            <SelectItem key={column} value={column}>
-                              {column}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                ))}
-                
-                {drillDownRules.length === 0 && selectedTables.length > 0 && (
-                  <div className="text-center py-4 text-gray-500 text-sm">
-                    Click + to add drill-down rules
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            {/* Visualization */}
-            {renderVisualizationSection()}
+                {/* Visualization */}
+                <AccordionItem value="visualization">
+                  <Card>
+                    <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                      <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                        <BarChart3 className="w-5 h-5 mr-2 text-purple-600" />
+                        Visualization
+                      </h2>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-6">
+                      {renderVisualizationSection().props.children.props.children}
+                    </AccordionContent>
+                  </Card>
+                </AccordionItem>
+              </Accordion>
+            </div>
           </div>
         </TabsContent>
 
