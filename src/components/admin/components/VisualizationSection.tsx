@@ -1,11 +1,9 @@
 
 import { BarChart3, Target, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { getColumnsForTable } from '../utils/tableUtils';
 
 interface SelectedTable {
@@ -313,196 +311,184 @@ export const VisualizationSection = ({
   };
 
   return (
-    <AccordionItem value="visualization">
-      <Card>
-        <AccordionTrigger className="px-6 py-4 hover:no-underline">
-          <h2 className="text-lg font-semibold text-gray-800 flex items-center">
-            <BarChart3 className="w-5 h-5 mr-2 text-purple-600" />
-            Visualization
-          </h2>
-        </AccordionTrigger>
-        <AccordionContent className="px-6 pb-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Report Name
-              </label>
-              <Input 
-                value={reportName}
-                onChange={(e) => setReportName(e.target.value)}
-                placeholder="Enter report name"
-              />
-            </div>
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Report Name
+        </label>
+        <Input 
+          value={reportName}
+          onChange={(e) => setReportName(e.target.value)}
+          placeholder="Enter report name"
+        />
+      </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Visualization Type
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {chartTypes.map((chart) => (
-                  <button
-                    key={chart.value}
-                    onClick={() => setSelectedChart(chart.value)}
-                    className={`p-3 border rounded-lg text-center transition-all ${
-                      selectedChart === chart.value
-                        ? 'border-purple-500 bg-purple-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="text-lg mb-1">{chart.icon}</div>
-                    <div className="text-xs font-medium">{chart.label}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Visualization Type
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          {chartTypes.map((chart) => (
+            <button
+              key={chart.value}
+              onClick={() => setSelectedChart(chart.value)}
+              className={`p-3 border rounded-lg text-center transition-all ${
+                selectedChart === chart.value
+                  ? 'border-purple-500 bg-purple-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="text-lg mb-1">{chart.icon}</div>
+              <div className="text-xs font-medium">{chart.label}</div>
+            </button>
+          ))}
+        </div>
+      </div>
 
-            {selectedChart && (
-              <>
-                <Separator />
-                <div>
-                  <h3 className="font-medium text-gray-800 mb-3">Chart Configuration</h3>
-                  {renderChartSpecificInputs()}
-                </div>
-              </>
-            )}
+      {selectedChart && (
+        <>
+          <Separator />
+          <div>
+            <h3 className="font-medium text-gray-800 mb-3">Chart Configuration</h3>
+            {renderChartSpecificInputs()}
+          </div>
+        </>
+      )}
 
-            <Separator />
+      <Separator />
 
-            <div>
-              <h3 className="font-medium text-gray-800 mb-3">Display Options</h3>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input 
-                    type="checkbox" 
-                    className="mr-2" 
-                    checked={chartConfig.showLegend || false}
-                    onChange={(e) => updateChartConfig('showLegend', e.target.checked)}
-                  />
-                  <span className="text-sm">Show legend</span>
-                </label>
-                <label className="flex items-center">
-                  <input 
-                    type="checkbox" 
-                    className="mr-2" 
-                    checked={chartConfig.showDataLabels || false}
-                    onChange={(e) => updateChartConfig('showDataLabels', e.target.checked)}
-                  />
-                  <span className="text-sm">Show data labels</span>
-                </label>
-              </div>
-            </div>
+      <div>
+        <h3 className="font-medium text-gray-800 mb-3">Display Options</h3>
+        <div className="space-y-2">
+          <label className="flex items-center">
+            <input 
+              type="checkbox" 
+              className="mr-2" 
+              checked={chartConfig.showLegend || false}
+              onChange={(e) => updateChartConfig('showLegend', e.target.checked)}
+            />
+            <span className="text-sm">Show legend</span>
+          </label>
+          <label className="flex items-center">
+            <input 
+              type="checkbox" 
+              className="mr-2" 
+              checked={chartConfig.showDataLabels || false}
+              onChange={(e) => updateChartConfig('showDataLabels', e.target.checked)}
+            />
+            <span className="text-sm">Show data labels</span>
+          </label>
+        </div>
+      </div>
 
-            <Separator />
+      <Separator />
 
-            <div>
-              <h3 className="font-medium text-gray-800 mb-3">Export Options</h3>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input type="checkbox" className="mr-2" defaultChecked />
-                  <span className="text-sm">Allow PDF export</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" className="mr-2" defaultChecked />
-                  <span className="text-sm">Allow Excel export</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" className="mr-2" />
-                  <span className="text-sm">Allow CSV export</span>
-                </label>
-              </div>
-            </div>
+      <div>
+        <h3 className="font-medium text-gray-800 mb-3">Export Options</h3>
+        <div className="space-y-2">
+          <label className="flex items-center">
+            <input type="checkbox" className="mr-2" defaultChecked />
+            <span className="text-sm">Allow PDF export</span>
+          </label>
+          <label className="flex items-center">
+            <input type="checkbox" className="mr-2" defaultChecked />
+            <span className="text-sm">Allow Excel export</span>
+          </label>
+          <label className="flex items-center">
+            <input type="checkbox" className="mr-2" />
+            <span className="text-sm">Allow CSV export</span>
+          </label>
+        </div>
+      </div>
 
-            <Separator />
+      <Separator />
 
-            <div>
+      <div>
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="font-medium text-gray-800 flex items-center">
+            <Target className="w-4 h-4 mr-2 text-red-600" />
+            Drill-Down Rules
+          </h3>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={addDrillDownRule}
+            disabled={selectedTables.length === 0}
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
+
+        <div className="space-y-3">
+          {drillDownRules.map((drillDown) => (
+            <div key={drillDown.id} className="border border-gray-200 rounded-lg p-3">
               <div className="flex justify-between items-center mb-3">
-                <h3 className="font-medium text-gray-800 flex items-center">
-                  <Target className="w-4 h-4 mr-2 text-red-600" />
-                  Drill-Down Rules
-                </h3>
+                <span className="text-sm font-medium">Drill-Down Rule</span>
                 <Button 
                   variant="outline" 
-                  size="sm" 
-                  onClick={addDrillDownRule}
-                  disabled={selectedTables.length === 0}
+                  size="sm"
+                  onClick={() => removeDrillDownRule(drillDown.id)}
                 >
-                  <Plus className="w-4 h-4" />
+                  <X className="w-3 h-3" />
                 </Button>
               </div>
+              
+              <div className="space-y-2">
+                <Input 
+                  value={drillDown.label}
+                  onChange={(e) => updateDrillDownRule(drillDown.id, 'label', e.target.value)}
+                  placeholder="Drill-down label"
+                />
 
-              <div className="space-y-3">
-                {drillDownRules.map((drillDown) => (
-                  <div key={drillDown.id} className="border border-gray-200 rounded-lg p-3">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-sm font-medium">Drill-Down Rule</span>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => removeDrillDownRule(drillDown.id)}
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Input 
-                        value={drillDown.label}
-                        onChange={(e) => updateDrillDownRule(drillDown.id, 'label', e.target.value)}
-                        placeholder="Drill-down label"
-                      />
+                <Select value={drillDown.fromColumn} onValueChange={(value) => updateDrillDownRule(drillDown.id, 'fromColumn', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="From column" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getAllSelectedColumns().map((col, idx) => (
+                      <SelectItem key={idx} value={`${col.table}.${col.column}`}>
+                        {col.table}.{col.column}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-                      <Select value={drillDown.fromColumn} onValueChange={(value) => updateDrillDownRule(drillDown.id, 'fromColumn', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="From column" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getAllSelectedColumns().map((col, idx) => (
-                            <SelectItem key={idx} value={`${col.table}.${col.column}`}>
-                              {col.table}.{col.column}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                <Select value={drillDown.toTable} onValueChange={(value) => updateDrillDownRule(drillDown.id, 'toTable', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="To table" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableTables.map((table) => (
+                      <SelectItem key={table.value} value={table.value}>
+                        {table.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-                      <Select value={drillDown.toTable} onValueChange={(value) => updateDrillDownRule(drillDown.id, 'toTable', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="To table" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableTables.map((table) => (
-                            <SelectItem key={table.value} value={table.value}>
-                              {table.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Select value={drillDown.toColumn} onValueChange={(value) => updateDrillDownRule(drillDown.id, 'toColumn', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="To column" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {drillDown.toTable && getColumnsForTable(drillDown.toTable).map((column) => (
-                            <SelectItem key={column} value={column}>
-                              {column}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                ))}
-                
-                {drillDownRules.length === 0 && selectedTables.length > 0 && (
-                  <div className="text-center py-4 text-gray-500 text-sm">
-                    Click + to add drill-down rules
-                  </div>
-                )}
+                <Select value={drillDown.toColumn} onValueChange={(value) => updateDrillDownRule(drillDown.id, 'toColumn', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="To column" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {drillDown.toTable && getColumnsForTable(drillDown.toTable).map((column) => (
+                      <SelectItem key={column} value={column}>
+                        {column}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          </div>
-        </AccordionContent>
-      </Card>
-    </AccordionItem>
+          ))}
+          
+          {drillDownRules.length === 0 && selectedTables.length > 0 && (
+            <div className="text-center py-4 text-gray-500 text-sm">
+              Click + to add drill-down rules
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };

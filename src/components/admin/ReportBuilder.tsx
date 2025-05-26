@@ -4,7 +4,7 @@ import { Database, Eye, Save, Code, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Accordion } from '@/components/ui/accordion';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { PromptReportBuilder } from './PromptReportBuilder';
 import { ReportPreview } from './ReportPreview';
 import { DataSourcesSection } from './components/DataSourcesSection';
@@ -137,33 +137,84 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
 
         <TabsContent value="visual" className="mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <div className="lg:col-span-3">
+            <div className="lg:col-span-3 space-y-4">
               <Accordion type="multiple" defaultValue={["data-sources", "visualization"]} className="space-y-4">
-                <DataSourcesSection 
-                  selectedTables={selectedTables}
-                  setSelectedTables={setSelectedTables}
-                />
-                <JoinsSection 
-                  selectedTables={selectedTables}
-                  joinRules={joinRules}
-                  setJoinRules={setJoinRules}
-                />
-                <FiltersSection 
-                  selectedTables={selectedTables}
-                  filterRules={filterRules}
-                  setFilterRules={setFilterRules}
-                />
-                <VisualizationSection 
-                  selectedTables={selectedTables}
-                  drillDownRules={drillDownRules}
-                  setDrillDownRules={setDrillDownRules}
-                  selectedChart={selectedChart}
-                  setSelectedChart={setSelectedChart}
-                  chartConfig={chartConfig}
-                  setChartConfig={setChartConfig}
-                  reportName={reportName}
-                  setReportName={setReportName}
-                />
+                <AccordionItem value="data-sources">
+                  <Card>
+                    <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                      <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                        <Database className="w-5 h-5 mr-2 text-blue-600" />
+                        Data Sources
+                      </h2>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-6">
+                      <DataSourcesSection 
+                        selectedTables={selectedTables}
+                        setSelectedTables={setSelectedTables}
+                      />
+                    </AccordionContent>
+                  </Card>
+                </AccordionItem>
+
+                <AccordionItem value="joins">
+                  <Card>
+                    <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                      <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                        <Code className="w-5 h-5 mr-2 text-green-600" />
+                        Table Joins
+                      </h2>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-6">
+                      <JoinsSection 
+                        selectedTables={selectedTables}
+                        joinRules={joinRules}
+                        setJoinRules={setJoinRules}
+                      />
+                    </AccordionContent>
+                  </Card>
+                </AccordionItem>
+
+                <AccordionItem value="filters">
+                  <Card>
+                    <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                      <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                        <Database className="w-5 h-5 mr-2 text-orange-600" />
+                        Filters
+                      </h2>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-6">
+                      <FiltersSection 
+                        selectedTables={selectedTables}
+                        filterRules={filterRules}
+                        setFilterRules={setFilterRules}
+                      />
+                    </AccordionContent>
+                  </Card>
+                </AccordionItem>
+
+                <AccordionItem value="visualization">
+                  <Card>
+                    <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                      <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                        <Eye className="w-5 h-5 mr-2 text-purple-600" />
+                        Visualization
+                      </h2>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-6">
+                      <VisualizationSection 
+                        selectedTables={selectedTables}
+                        drillDownRules={drillDownRules}
+                        setDrillDownRules={setDrillDownRules}
+                        selectedChart={selectedChart}
+                        setSelectedChart={setSelectedChart}
+                        chartConfig={chartConfig}
+                        setChartConfig={setChartConfig}
+                        reportName={reportName}
+                        setReportName={setReportName}
+                      />
+                    </AccordionContent>
+                  </Card>
+                </AccordionItem>
               </Accordion>
             </div>
           </div>
@@ -175,17 +226,20 @@ export const ReportBuilder = ({ onSave, onPreview }: ReportBuilderProps) => {
               <PromptReportBuilder onSave={onSave} onPreview={onPreview} />
             </div>
             <div className="lg:col-span-1">
-              <VisualizationSection 
-                selectedTables={selectedTables}
-                drillDownRules={drillDownRules}
-                setDrillDownRules={setDrillDownRules}
-                selectedChart={selectedChart}
-                setSelectedChart={setSelectedChart}
-                chartConfig={chartConfig}
-                setChartConfig={setChartConfig}
-                reportName={reportName}
-                setReportName={setReportName}
-              />
+              <Card className="p-6">
+                <h2 className="text-lg font-semibold text-gray-800 mb-4">Visualization Options</h2>
+                <VisualizationSection 
+                  selectedTables={selectedTables}
+                  drillDownRules={drillDownRules}
+                  setDrillDownRules={setDrillDownRules}
+                  selectedChart={selectedChart}
+                  setSelectedChart={setSelectedChart}
+                  chartConfig={chartConfig}
+                  setChartConfig={setChartConfig}
+                  reportName={reportName}
+                  setReportName={setReportName}
+                />
+              </Card>
             </div>
           </div>
         </TabsContent>
@@ -215,17 +269,20 @@ WHERE s.order_date >= '2024-01-01'"
               </Card>
             </div>
             <div className="lg:col-span-1">
-              <VisualizationSection 
-                selectedTables={selectedTables}
-                drillDownRules={drillDownRules}
-                setDrillDownRules={setDrillDownRules}
-                selectedChart={selectedChart}
-                setSelectedChart={setSelectedChart}
-                chartConfig={chartConfig}
-                setChartConfig={setChartConfig}
-                reportName={reportName}
-                setReportName={setReportName}
-              />
+              <Card className="p-6">
+                <h2 className="text-lg font-semibold text-gray-800 mb-4">Visualization Options</h2>
+                <VisualizationSection 
+                  selectedTables={selectedTables}
+                  drillDownRules={drillDownRules}
+                  setDrillDownRules={setDrillDownRules}
+                  selectedChart={selectedChart}
+                  setSelectedChart={setSelectedChart}
+                  chartConfig={chartConfig}
+                  setChartConfig={setChartConfig}
+                  reportName={reportName}
+                  setReportName={setReportName}
+                />
+              </Card>
             </div>
           </div>
         </TabsContent>
